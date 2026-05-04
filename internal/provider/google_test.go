@@ -14,9 +14,61 @@ func TestGoogleProviderName(t *testing.T) {
 	}
 }
 
-// TestGoogleProviderRemoteFallback_NoKey verifies that when both GEMINI_API_KEY
-// and GOOGLE_API_KEY are unset and the model name is not supported by the local
-// tokenizer, Count returns the exact remote-fallback error message.
+// TestGoogleProvider_LocalAlias_NoKey verifies that 2026-05 catalog models
+// the SDK does NOT directly know (gemini-3.1-pro-preview, gemini-3-flash-preview,
+// gemini-3.1-flash-lite-preview) still tokenize locally via the alias mapping
+// in google.go. No API key required.
+func TestGoogleProvider_LocalAlias_NoKey(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping vocab-download test in short mode")
+	}
+	t.Setenv("GEMINI_API_KEY", "")
+	t.Setenv("GOOGLE_API_KEY", "")
+
+	p := &googleProvider{}
+	const text = "Hello, world."
+
+	models := []string{
+		"gemini-3.1-pro-preview",
+		"gemini-3-pro-preview",
+		"gemini-3-flash-preview",
+		"gemini-3.1-flash-lite-preview",
+	}
+	for _, m := range models {
+		t.Run(m, func(t *testing.T) {
+			got, err := p.Count(context.Background(), m, text)
+			if err != nil {
+				t.Fatalf("Count(%q) error: %v (expected local alias fallback)", m, err)
+			}
+			if got <= 0 {
+				t.Errorf("Count(%q) = %d, want > 0", m, got)
+			}
+		})
+	}
+}
+
+// TestGoogleProvider_LocalDirect_NoKey covers a model that the SDK accepts
+// directly without aliasing. Should still tokenize offline.
+func TestGoogleProvider_LocalDirect_NoKey(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping vocab-download test in short mode")
+	}
+	t.Setenv("GEMINI_API_KEY", "")
+	t.Setenv("GOOGLE_API_KEY", "")
+
+	p := &googleProvider{}
+	got, err := p.Count(context.Background(), "gemini-1.5-pro", "Hello, world.")
+	if err != nil {
+		t.Fatalf("Count(gemini-1.5-pro) error: %v", err)
+	}
+	if got <= 0 {
+		t.Errorf("Count(gemini-1.5-pro) = %d, want > 0", got)
+	}
+}
+
+// TestGoogleProviderRemoteFallback_NoKey verifies that when the model is
+// unknown to BOTH the local tokenizer and the alias map, and no API key is
+// available, Count returns the exact remote-fallback error message.
 func TestGoogleProviderRemoteFallback_NoKey(t *testing.T) {
 	t.Setenv("GEMINI_API_KEY", "")
 	t.Setenv("GOOGLE_API_KEY", "")

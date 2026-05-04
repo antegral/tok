@@ -16,21 +16,22 @@ import (
 // are looked up dynamically by org via the HF API in a later phase.
 var BuiltinModels = map[string][]string{
 	"openai": {
+		"openai/gpt-5.5", "openai/gpt-5.5-pro",
 		"openai/gpt-5", "openai/gpt-5-mini", "openai/gpt-5-nano",
 		"openai/gpt-4.1", "openai/gpt-4o", "openai/gpt-4o-mini",
-		"openai/o1", "openai/o3", "openai/o4-mini",
-		"openai/gpt-3.5-turbo",
+		"openai/o3", "openai/o4-mini",
 	},
 	"anthropic": {
+		"anthropic/claude-opus-4-7",
 		"anthropic/claude-opus-4-6",
-		"anthropic/claude-sonnet-4-5",
+		"anthropic/claude-sonnet-4-6",
 		"anthropic/claude-haiku-4-5",
-		"anthropic/claude-3-5-haiku-latest",
 	},
 	"google": {
-		"google/gemini-3.1-pro-preview",
+		"google/gemini-3.1-pro",
+		"google/gemini-3.1-flash-lite",
+		"google/gemini-3-flash",
 		"google/gemini-2.5-pro", "google/gemini-2.5-flash",
-		"google/gemini-1.5-pro", "google/gemini-1.5-flash",
 	},
 }
 

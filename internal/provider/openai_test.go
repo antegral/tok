@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"os"
 	"strings"
 	"testing"
 )
@@ -37,21 +38,62 @@ func TestOpenAI_Count_KnownStrings(t *testing.T) {
 	}
 }
 
-func TestOpenAI_Count_UnknownModel(t *testing.T) {
+// TestOpenAI_Count_UnknownModel_NoKey verifies that requesting a model unknown
+// to tiktoken-go without an API key returns the exact error message expected by
+// main.go (which prepends "error: " before printing).
+func TestOpenAI_Count_UnknownModel_NoKey(t *testing.T) {
+	t.Setenv("OPENAI_API_KEY", "")
 	p := &openaiProvider{}
-	_, err := p.Count(context.Background(), "definitely-not-a-real-model-xyz", "hi")
+	_, err := p.Count(context.Background(), "gpt-5.5", "hi")
 	if err == nil {
-		t.Fatal("expected error for unknown model, got nil")
+		t.Fatal("expected error for unknown model without API key, got nil")
 	}
-	want := `openai: unknown model "definitely-not-a-real-model-xyz"`
-	if !strings.Contains(err.Error(), want) {
-		t.Errorf("error message: got %q, want substring %q", err.Error(), want)
+	want := `OPENAI_API_KEY environment variable is required for openai model "gpt-5.5" (not in local tokenizer)`
+	if err.Error() != want {
+		t.Errorf("error message:\n  got:  %q\n  want: %q", err.Error(), want)
 	}
+}
+
+// TestOpenAI_Count_UnknownModel_WithKey is an integration test that calls the
+// real OpenAI API. It is skipped unless OPENAI_API_KEY is set in the environment.
+func TestOpenAI_Count_UnknownModel_WithKey(t *testing.T) {
+	apiKey := os.Getenv("OPENAI_API_KEY")
+	if apiKey == "" {
+		t.Skip("OPENAI_API_KEY not set; skipping integration test")
+	}
+	p := &openaiProvider{}
+	got, err := p.Count(context.Background(), "gpt-5.5", "The quick brown fox jumps over the lazy dog.")
+	if err != nil {
+		t.Fatalf("Count(gpt-5.5, fox) error: %v", err)
+	}
+	if got <= 0 {
+		t.Errorf("Count(gpt-5.5, fox) = %d, want > 0", got)
+	}
+	t.Logf("gpt-5.5 token count for fox text: %d", got)
 }
 
 func TestOpenAI_Name(t *testing.T) {
 	p := &openaiProvider{}
 	if p.Name() != "openai" {
 		t.Errorf("Name() = %q, want %q", p.Name(), "openai")
+	}
+}
+
+// Ensure the old unknown-model error string is gone (it's now superseded by
+// the remote-fallback path).
+func TestOpenAI_OldErrorGone(t *testing.T) {
+	t.Setenv("OPENAI_API_KEY", "")
+	p := &openaiProvider{}
+	_, err := p.Count(context.Background(), "definitely-not-a-real-model-xyz", "hi")
+	if err == nil {
+		t.Fatal("expected error for unknown model, got nil")
+	}
+	// Old error format must not appear.
+	if strings.Contains(err.Error(), "unknown openai model") {
+		t.Errorf("old error format still present: %q", err.Error())
+	}
+	// New format must appear.
+	if !strings.Contains(err.Error(), "OPENAI_API_KEY environment variable is required") {
+		t.Errorf("new error format missing: %q", err.Error())
 	}
 }

@@ -29,7 +29,7 @@ Overrides:
 
 ```bash
 # pin a specific version
-curl -fsSL https://raw.githubusercontent.com/antegral/tok/main/install.sh | VERSION=v1.0.1 sh
+curl -fsSL https://raw.githubusercontent.com/antegral/tok/main/install.sh | VERSION=v1.1.0 sh
 
 # system-wide install (needs sudo)
 curl -fsSL https://raw.githubusercontent.com/antegral/tok/main/install.sh | INSTALL_DIR=/usr/local/bin sudo sh
@@ -112,7 +112,7 @@ tok meta-llama/Llama-3.1-8B-Instruct README.md
 
 | Prefix | Backend | Network | API key |
 |--------|---------|---------|---------|
-| `openai/` | tiktoken-go (local BPE) | No | No |
+| `openai/` | tiktoken-go (local BPE) → Responses API REST fallback | Local: No, Fallback: Yes | Only on fallback (`OPENAI_API_KEY`) |
 | `anthropic/` | Anthropic REST API | Yes | Yes (ANTHROPIC_API_KEY) |
 | `google/` | genai/tokenizer (local) + REST API fallback | Local: No, Fallback: Yes | Only on fallback (GEMINI_API_KEY or GOOGLE_API_KEY) |
 | `<org>/<repo>` | daulet/tokenizers (HuggingFace Hub) | Yes (model download) | Optional (HF_TOKEN) |
@@ -133,8 +133,7 @@ set -a; source .env; set +a
 | `GEMINI_API_KEY` | For newer Gemini models (remote tokenization) | API key from https://aistudio.google.com/apikey |
 | `GOOGLE_API_KEY` | Alternative to GEMINI_API_KEY | Same source as GEMINI_API_KEY |
 | `HF_TOKEN` | Optional (required for private models) | Token from https://huggingface.co/settings/tokens |
-
-**Note:** `OPENAI_API_KEY` is NOT used. OpenAI models use local tiktoken-go tokenization.
+| `OPENAI_API_KEY` | Optional — for new models not in tiktoken-go | API key from https://platform.openai.com/api-keys |
 
 ## Tab completion
 

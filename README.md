@@ -15,7 +15,29 @@ $ tok meta-llama/Llama-3.1-8B-Instruct document.md
 2104
 ```
 
-## Installation
+## Quick install
+
+Linux and macOS (amd64 / arm64):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/antegral/tok/main/install.sh | sh
+```
+
+The Linux binaries are statically linked against musl, so they run on every glibc version (Ubuntu, Debian, Fedora, RHEL/Rocky/Alma, Amazon Linux, Alpine, …) with no library dependencies.
+
+Overrides:
+
+```bash
+# pin a specific version
+curl -fsSL https://raw.githubusercontent.com/antegral/tok/main/install.sh | VERSION=v1.0.1 sh
+
+# system-wide install (needs sudo)
+curl -fsSL https://raw.githubusercontent.com/antegral/tok/main/install.sh | INSTALL_DIR=/usr/local/bin sudo sh
+```
+
+The script downloads the appropriate release archive, verifies its SHA-256, and installs `tok` into `~/.local/bin` (default).
+
+## Build from source
 
 Clone the repository and build using the Makefile:
 

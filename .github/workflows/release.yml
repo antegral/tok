@@ -27,7 +27,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-go@v5
+      # Go is needed only for the macOS builds; Linux builds use the
+      # golang-alpine container's bundled toolchain.
+      - name: Set up Go (Darwin)
+        if: runner.os == 'macOS'
+        uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
           cache: true
@@ -36,9 +40,30 @@ jobs:
         uses: actions/cache@v4
         with:
           path: lib
-          key: libtokenizers-${{ matrix.triplet }}-v1.27.0
+          key: libtokenizers-${{ matrix.triplet }}-v1.27.0-${{ runner.os == 'Linux' && 'musl' || 'native' }}
 
-      - name: Build
+      # ---- Linux: build a fully static, glibc-independent binary inside
+      # an alpine container so the artifact runs on any Linux distro.
+      - name: Build (Linux musl static)
+        if: runner.os == 'Linux'
+        run: |
+          musl_triplet="$(echo '${{ matrix.triplet }}' | sed 's/linux-/linux-musl-/')"
+          host_uid=$(id -u)
+          host_gid=$(id -g)
+          docker run --rm \
+            -v "$PWD":/src -w /src \
+            -e TOKENIZERS_TRIPLET="$musl_triplet" \
+            -e STATIC=1 \
+            golang:1.24-alpine \
+            sh -c "
+              apk add --no-cache make tar curl bash git build-base &&
+              git config --global --add safe.directory /src &&
+              make build &&
+              chown -R ${host_uid}:${host_gid} /src
+            "
+
+      - name: Build (Darwin native)
+        if: runner.os == 'macOS'
         run: make build
 
       - name: Smoke test
@@ -48,6 +73,8 @@ jobs:
           out=$(./tok openai/gpt-4o smoke.txt)
           echo "tok output: $out"
           test "$out" -eq 10
+          ls -la tok
+          file tok || true
 
       - name: Archive
         shell: bash

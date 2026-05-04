@@ -5,13 +5,19 @@
 # from the upstream release page rather than building Rust ourselves.
 #
 # Targets:
-#   make lib/libtokenizers.a   – fetch the prebuilt static lib (linux-amd64)
+#   make lib/libtokenizers.a   – fetch the prebuilt static lib (host triplet)
 #   make build                 – go build with the right CGO_LDFLAGS
 #   make test                  – go test with the right CGO_LDFLAGS
 #   make install               – symlink ./tok into $(BIN_DIR) (default: ~/.local/bin)
 #   make uninstall             – remove the installed symlink
 #   make tidy                  – go mod tidy
 #   make clean                 – remove the binary and lib/
+#
+# Variables:
+#   TOKENIZERS_TRIPLET   override host detection (e.g. linux-musl-amd64)
+#   STATIC=1             produce a fully static binary (Linux only;
+#                        requires a musl toolchain such as alpine)
+#   GO_LDFLAGS           extra linker flags (default: -s -w)
 #
 # Pinned daulet/tokenizers release. The cgo source embeds a link-time
 # version check (`tokenizers_version_1_26_0`) and v1.27.0 is the latest
@@ -26,22 +32,24 @@ TOKENIZERS_VERSION ?= v1.27.0
 #   libtokenizers.darwin-arm64.tar.gz
 UNAME_S := $(shell uname -s | tr '[:upper:]' '[:lower:]')
 UNAME_M := $(shell uname -m)
-ifeq ($(UNAME_S),linux)
-  ifeq ($(UNAME_M),x86_64)
-    TOKENIZERS_TRIPLET := linux-amd64
-  else ifeq ($(UNAME_M),aarch64)
-    TOKENIZERS_TRIPLET := linux-arm64
+ifndef TOKENIZERS_TRIPLET
+  ifeq ($(UNAME_S),linux)
+    ifeq ($(UNAME_M),x86_64)
+      TOKENIZERS_TRIPLET := linux-amd64
+    else ifeq ($(UNAME_M),aarch64)
+      TOKENIZERS_TRIPLET := linux-arm64
+    else
+      TOKENIZERS_TRIPLET := linux-$(UNAME_M)
+    endif
+  else ifeq ($(UNAME_S),darwin)
+    ifeq ($(UNAME_M),arm64)
+      TOKENIZERS_TRIPLET := darwin-arm64
+    else
+      TOKENIZERS_TRIPLET := darwin-x86_64
+    endif
   else
-    TOKENIZERS_TRIPLET := linux-$(UNAME_M)
+    TOKENIZERS_TRIPLET := $(UNAME_S)-$(UNAME_M)
   endif
-else ifeq ($(UNAME_S),darwin)
-  ifeq ($(UNAME_M),arm64)
-    TOKENIZERS_TRIPLET := darwin-arm64
-  else
-    TOKENIZERS_TRIPLET := darwin-x86_64
-  endif
-else
-  TOKENIZERS_TRIPLET := $(UNAME_S)-$(UNAME_M)
 endif
 
 TOKENIZERS_URL := https://github.com/daulet/tokenizers/releases/download/$(TOKENIZERS_VERSION)/libtokenizers.$(TOKENIZERS_TRIPLET).tar.gz
@@ -49,6 +57,21 @@ TOKENIZERS_URL := https://github.com/daulet/tokenizers/releases/download/$(TOKEN
 # Absolute path to the lib dir so CGO can resolve it from any cwd.
 LIB_DIR := $(abspath lib)
 export CGO_LDFLAGS = -L$(LIB_DIR)
+
+# Linker flags. -s -w strips debug info (~5-10 MB smaller binary).
+# Set STATIC=1 to produce a fully self-contained binary (musl + libstdc++
+# linked statically). Used by the release pipeline to make the linux
+# binaries portable across all glibc versions.
+# osusergo + netgo are required when statically linking — the cgo-backed
+# user/DNS resolvers do not work without a libc to dlopen at runtime.
+GO_LDFLAGS ?= -s -w
+GO_TAGS    ?=
+ifdef STATIC
+  ifeq ($(UNAME_S),linux)
+    GO_LDFLAGS += -linkmode=external -extldflags=-static
+    GO_TAGS    += osusergo,netgo
+  endif
+endif
 
 # Install location. Default is sudo-free user-local; override with
 #   make install PREFIX=/usr/local        (requires sudo for system install)
@@ -60,7 +83,7 @@ INSTALL_NAME := tok
 .PHONY: build test tidy clean install uninstall
 
 build: lib/libtokenizers.a
-	go build -o tok .
+	go build $(if $(GO_TAGS),-tags=$(GO_TAGS)) -ldflags="$(GO_LDFLAGS)" -o tok .
 
 test: lib/libtokenizers.a
 	go test ./...

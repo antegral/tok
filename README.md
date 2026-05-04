@@ -180,6 +180,7 @@ On error, tok outputs `error: <message>` to stderr and exits with code 1. Common
 - `ANTHROPIC_API_KEY environment variable is required for Claude models` — missing Anthropic API key
 - `GEMINI_API_KEY (or GOOGLE_API_KEY) environment variable is required for Gemini remote tokenization` — only seen when the model name is unknown to both `genai/tokenizer` and the gemma3 alias map (rare; every catalog model is covered locally)
 - `HF_TOKEN environment variable is required for private model <org>/<repo>` — missing token for private HuggingFace models
+- `input "file.pdf" appears to be binary, not text (UTF-8 only — convert UTF-16/UTF-32 first)` — input contains a null byte (binary, ELF, PDF, image, archive, or UTF-16 file)
 - Standard file I/O errors (file not found, permission denied, etc.)
 
 ## Building with CGO

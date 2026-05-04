@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test (linux-amd64)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Cache libtokenizers.a
+        uses: actions/cache@v4
+        with:
+          path: lib
+          key: libtokenizers-${{ runner.os }}-${{ runner.arch }}-v1.27.0
+
+      - name: Fetch prebuilt static lib
+        run: make lib/libtokenizers.a
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: go test
+        run: make test
+
+      - name: go build
+        run: make build
+
+      - name: Smoke test
+        run: |
+          echo "The quick brown fox jumps over the lazy dog." > /tmp/smoke.txt
+          out=$(./tok openai/gpt-4o /tmp/smoke.txt)
+          echo "tok output: $out"
+          test "$out" -eq 10

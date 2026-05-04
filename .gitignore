@@ -12,7 +12,12 @@
 # Editor/OS noise
 .DS_Store
 *.swp
+.idea/
+.vscode/
 
-# AI related
-/.claude
-/.omc
+# Claude Code / oh-my-claudecode local state
+.claude/
+.omc/
+
+# Release output
+/dist/

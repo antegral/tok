@@ -1,0 +1,18 @@
+# Built CLI binary
+/tok
+
+# Prebuilt CGO static library (downloaded by `make lib/libtokenizers.a`)
+/lib/
+
+# Local environment (do NOT commit secrets)
+.env
+.env.*
+!.env.example
+
+# Editor/OS noise
+.DS_Store
+*.swp
+
+# AI related
+/.claude
+/.omc

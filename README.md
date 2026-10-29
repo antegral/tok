@@ -39,6 +39,8 @@ The script downloads the appropriate release archive, verifies its SHA-256, and 
 
 ## Build from source
 
+Requires Go 1.27.3 or newer, a C/C++ toolchain with CGO enabled, Make, curl, and tar. CI and macOS release builds read the Go version from `go.mod`; Linux releases use the matching `golang:1.27.3-alpine` image.
+
 Clone the repository and build using the Makefile:
 
 ```bash
@@ -49,7 +51,18 @@ make build
 
 `make build` automatically downloads `lib/libtokenizers.a`, the prebuilt Rust static library required by `daulet/tokenizers`. Supported host platforms: `linux-amd64`, `linux-arm64`, `darwin-amd64` (Intel), `darwin-arm64` (Apple Silicon).
 
+The native tokenizer archive remains pinned to v1.27.0 in the Makefile and workflow cache keys to match `daulet/tokenizers`. Update those pins together when changing that dependency.
+
 The resulting binary `./tok` is ready to use directly.
+
+### Tests
+
+```bash
+make test GOFLAGS='-race -count=1'
+TOK_HF_INTEGRATION=1 make test GOFLAGS='-race -count=1'
+```
+
+The first command runs the full default suite, including Google's local tokenizer tests, which may download vocabularies. The second also enables public HuggingFace download and tokenization tests. Credential-gated API tests run when their corresponding API keys are set and require an accessible account with sufficient credits.
 
 ### Install on PATH
 

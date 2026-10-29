@@ -25,19 +25,19 @@ jobs:
             triplet: darwin-arm64
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Go is needed only for the macOS builds; Linux builds use the
       # golang-alpine container's bundled toolchain.
       - name: Set up Go (Darwin)
         if: runner.os == 'macOS'
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
           cache: true
 
       - name: Cache libtokenizers.a
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: lib
           key: libtokenizers-${{ matrix.triplet }}-v1.27.0-${{ runner.os == 'Linux' && 'musl' || 'native' }}
@@ -54,7 +54,7 @@ jobs:
             -v "$PWD":/src -w /src \
             -e TOKENIZERS_TRIPLET="$musl_triplet" \
             -e STATIC=1 \
-            golang:1.24-alpine \
+            golang:1.27.3-alpine \
             sh -c "
               apk add --no-cache make tar curl bash git build-base &&
               git config --global --add safe.directory /src &&
@@ -86,7 +86,7 @@ jobs:
           ls -la dist/
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: tok-${{ matrix.triplet }}
           path: dist/
@@ -98,10 +98,10 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: dist
           merge-multiple: true
@@ -117,7 +117,7 @@ jobs:
           cat checksums.txt
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             dist/*.tar.gz

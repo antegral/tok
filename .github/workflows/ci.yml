@@ -14,15 +14,15 @@ jobs:
     name: Test (linux-amd64)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
           cache: true
 
       - name: Cache libtokenizers.a
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: lib
           key: libtokenizers-${{ runner.os }}-${{ runner.arch }}-v1.27.0
